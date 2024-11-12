@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @unique @default(cuid())
+  clerkUserId    String   @unique
+  name           String?
+  email          String   @unique
+  imageUrl       String?
+  createdIssues  Issue[]  @relation("Reporter")
+  assignedIssues Issue[]  @relation("Assignee")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Project {
+  id             String   @unique @default(cuid())
+  name           String
+  description    String
+  key            String
+  organizationId String
+  sprint         Sprint[] @relation(fields: [])
+  issues         Issue[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, key])
+}
+
+model Sprint {
+  id        String       @unique @default(cuid())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  status    SprintStatus @default(PLANNED)
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  issues    Issue[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+enum SprintStatus {
+  PLANNED
+  ACTIVE
+  Completed
+}
+
+model Issue {
+  id          String      @unique @default(cuid())
+  name        String
+  description String?
+  status      issueStatus
+  order       Int
+  priority    issueType
+  reporter    User        @relation("Reporter", fields: [reporterId], references: [id])
+  assignee    User?       @relation("Assignee", fields: [assigneeId], references: [id])
+  assigneeId  String
+  reporterId  String
+  Project     Project?    @relation(fields: [projectId], references: [id])
+  projectId   String?
+  Sprint      Sprint?     @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  sprintId    String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status, order])
+}
+
+enum issueStatus {
+  TO_DO
+  IN_PROGRESS
+  DONE
+}
+
+enum issueType {
+  low
+  medium
+  high
+}
